@@ -1,0 +1,232 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+entity traffic_light_dual_road is
+    Port ( 
+        clk           : in  STD_LOGIC;  -- 外部555提供的1Hz时钟信号
+        rst           : in  STD_LOGIC;  -- 外部复位（本例中未用，内部自动复位取代外部复位）
+        flash_trigger : in  STD_LOGIC;  -- 用户按键，触发/停止黄灯闪烁模式
+        
+        -- 车辆倒计时接口（两组74LS192级联）
+        down          : out STD_LOGIC;  -- 车辆倒计时脉冲 (接低位CPD)
+        load          : out STD_LOGIC;  -- 车辆倒计时LOAD (低电平有效)
+        main_preset_high : out STD_LOGIC_VECTOR(3 downto 0);  -- 主干道车辆预置（十位）
+        main_preset_low  : out STD_LOGIC_VECTOR(3 downto 0);  -- 主干道车辆预置（个位）
+        side_preset_high : out STD_LOGIC_VECTOR(3 downto 0);  -- 支干道车辆预置（十位）
+        side_preset_low  : out STD_LOGIC_VECTOR(3 downto 0);  -- 支干道车辆预置（个位）
+        low_q         : in  STD_LOGIC_VECTOR(3 downto 0);  -- 车辆倒计时低位74LS192 Q输出
+        high_q        : in  STD_LOGIC_VECTOR(3 downto 0);  -- 车辆倒计时高位74LS192 Q输出
+
+        -- 人行道倒计时接口（另外两组74LS192级联）
+        ped_down      : out STD_LOGIC;  -- 人行倒计时脉冲 (接低位CPD)
+        ped_load      : out STD_LOGIC;  -- 人行倒计时LOAD (低电平有效)
+        ped_preset_high : out STD_LOGIC_VECTOR(3 downto 0);  -- 人行道预置（十位）
+        ped_preset_low  : out STD_LOGIC_VECTOR(3 downto 0)   -- 人行道预置（个位）
+    );
+end traffic_light_dual_road;
+
+architecture Behavioral of traffic_light_dual_road is
+    -- 定义车辆状态机状态（不含 FLASH_YELLOW）
+    type state_type is (MAIN_GREEN, MAIN_YELLOW, SIDE_GREEN, SIDE_YELLOW, EMERGENCY);
+    signal state : state_type := MAIN_GREEN;
+    
+    -- 预设时间（单位：秒，1Hz时钟下）
+    constant MAIN_GREEN_TIME : integer := 60;  -- 主干道车辆绿灯时间
+    constant SIDE_GREEN_TIME : integer := 45;  -- 支干道车辆绿灯时间
+    constant YELLOW_TIME     : integer := 5;   -- 黄灯时间
+
+    -- 对应行人倒计时：
+    -- 车辆红灯时间 = 对应干道绿灯时间（例如，支干道车辆红灯时间 = MAIN_GREEN_TIME - YELLOW_TIME，主干道车辆红灯时间 = SIDE_GREEN_TIME + YELLOW_TIME）
+    -- 行人红灯时间等于车辆干道绿灯时间，行人绿灯时间 = 车辆红灯时间 - 5秒。
+    -- 本例中：
+    -- 当车辆状态为 MAIN_GREEN：主干道车辆绿灯，支干道车辆红灯，
+    --      则支干道人行红灯倒计时 = MAIN_GREEN_TIME，
+    --      主干道人行绿灯倒计时 = MAIN_GREEN_TIME - YELLOW_TIME.
+    -- 当车辆状态为 SIDE_GREEN：支干道车辆绿灯，主干道车辆红灯，
+    --      则主干道人行红灯倒计时 = SIDE_GREEN_TIME,
+    --      支干道人行绿灯倒计时 = SIDE_GREEN_TIME - YELLOW_TIME.
+    
+    -- 这里仅定义预置值的计算在后续状态机中体现
+
+    -- 内部辅助信号
+    signal flash_active : STD_LOGIC := '0';  -- 锁存黄灯闪烁模式（由用户按键切换）
+    signal prev_flash_active : STD_LOGIC := '0';  -- 上一时钟周期flash_active
+    signal auto_rst     : STD_LOGIC := '0';  -- 内部自动复位信号
+    
+    -- 用于生成车辆倒计时脉冲（向低位74LS192的CPD输入）
+    signal carry : STD_LOGIC := '0';
+    
+    -- 闪烁辅助信号
+    signal flash_toggle : STD_LOGIC := '0';
+    signal flash_counter : integer range 0 to 1 := 0;
+
+begin
+
+    ----------------------------------------------------------------------------
+    -- 自动复位机制：
+    -- 当状态为 SIDE_YELLOW 且车辆倒计时归零（即 low_q和high_q均为 "0000"），
+    -- 或者上一个周期 flash_active 为 '1' 而当前 flash_active 变为 '0'（即用户停止闪烁），
+    -- 则 auto_rst 置 '1'，触发复位。复位信号在状态机检测到后使状态机返回 MAIN_GREEN。
+    ----------------------------------------------------------------------------
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            if (state = SIDE_YELLOW and high_q = "0000" and low_q = "0000") or
+               (prev_flash_active = '1' and flash_active = '0') then
+                auto_rst <= '1';
+            else
+                auto_rst <= '0';
+            end if;
+            prev_flash_active <= flash_active;
+        end if;
+    end process;
+
+    ----------------------------------------------------------------------------
+    -- 车辆状态机（不含FLASH_YELLOW状态）
+    ----------------------------------------------------------------------------
+    process(clk, auto_rst)
+    begin
+        if auto_rst = '1' then
+            state <= MAIN_GREEN;
+            flash_active <= '0';
+        elsif rising_edge(clk) then
+            if flash_trigger = '1' then
+                flash_active <= '1';  -- 用户触发黄灯闪烁模式
+            end if;
+            
+            if (high_q = "0000" and low_q = "0000") then
+                case state is
+                    when MAIN_GREEN =>
+                        state <= MAIN_YELLOW;
+                    when MAIN_YELLOW =>
+                        state <= SIDE_GREEN;
+                    when SIDE_GREEN =>
+                        state <= SIDE_YELLOW;
+                    when SIDE_YELLOW =>
+                        state <= MAIN_GREEN;
+                    when EMERGENCY =>
+                        null;
+                end case;
+            end if;
+        end if;
+    end process;
+
+    ----------------------------------------------------------------------------
+    -- 黄灯闪烁辅助逻辑
+    ----------------------------------------------------------------------------
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            if flash_active = '1' then
+                if flash_counter = 1 then
+                    flash_toggle <= not flash_toggle;
+                    flash_counter <= 0;
+                else
+                    flash_counter <= flash_counter + 1;
+                end if;
+            else
+                flash_toggle <= '0';
+                flash_counter <= 0;
+            end if;
+        end if;
+    end process;
+
+    ----------------------------------------------------------------------------
+    -- 车辆倒计时脉冲生成：检测车辆倒计时低位74LS192输出 low_q
+    ----------------------------------------------------------------------------
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            if low_q = "0000" then  
+                carry <= '0';
+            elsif low_q = "1001" then  
+                carry <= '1';
+            end if;
+        end if;
+    end process;
+    down <= carry;
+
+    ----------------------------------------------------------------------------
+    -- 车辆倒计时预置与 LOAD 控制
+    ----------------------------------------------------------------------------
+    process(state, flash_toggle)
+    begin
+        case state is
+            when MAIN_GREEN =>
+                -- 主干道车辆绿灯倒计时：预置 60秒
+                main_preset_high <= std_logic_vector(to_unsigned(MAIN_GREEN_TIME/10, 4));
+                main_preset_low  <= std_logic_vector(to_unsigned(MAIN_GREEN_TIME mod 10, 4));
+                -- 支干道车辆红灯倒计时：预置为 (MAIN_GREEN_TIME - YELLOW_TIME) 秒，即50秒
+                side_preset_high <= std_logic_vector(to_unsigned((MAIN_GREEN_TIME - YELLOW_TIME)/10, 4));
+                side_preset_low  <= std_logic_vector(to_unsigned((MAIN_GREEN_TIME - YELLOW_TIME) mod 10, 4));
+                load <= '0';
+                
+            when MAIN_YELLOW =>
+                -- 主干道黄灯：预置 5秒
+                main_preset_high <= std_logic_vector(to_unsigned(YELLOW_TIME/10, 4));
+                main_preset_low  <= std_logic_vector(to_unsigned(YELLOW_TIME mod 10, 4));
+                load <= '0';
+                
+            when SIDE_GREEN =>
+                -- 支干道绿灯：预置 45秒
+                side_preset_high <= std_logic_vector(to_unsigned(SIDE_GREEN_TIME/10, 4));
+                side_preset_low  <= std_logic_vector(to_unsigned(SIDE_GREEN_TIME mod 10, 4));
+                -- 主干道红灯：预置为 (SIDE_GREEN_TIME + YELLOW_TIME)秒，即45+5=50秒
+                main_preset_high <= std_logic_vector(to_unsigned((SIDE_GREEN_TIME + YELLOW_TIME)/10, 4));
+                main_preset_low  <= std_logic_vector(to_unsigned((SIDE_GREEN_TIME + YELLOW_TIME) mod 10, 4));
+                load <= '0';
+                
+            when SIDE_YELLOW =>
+                -- 支干道黄灯：预置 5秒
+                side_preset_high <= std_logic_vector(to_unsigned(YELLOW_TIME/10, 4));
+                side_preset_low  <= std_logic_vector(to_unsigned(YELLOW_TIME mod 10, 4));
+                load <= '0';
+                
+            when EMERGENCY =>
+                null;
+        end case;
+    end process;
+
+    ----------------------------------------------------------------------------
+    -- 人行道倒计时预置与 LOAD 控制
+    -- 规则：
+    -- 当车辆状态为 MAIN_GREEN时（主干道车辆绿灯），支干道车辆为红灯，
+    --     则支干道人行道红灯倒计时 = MAIN_GREEN_TIME，
+    --     主干道人行道绿灯倒计时 = MAIN_GREEN_TIME - YELLOW_TIME。
+    -- 当车辆状态为 SIDE_GREEN时（支干道车辆绿灯），主干道车辆为红灯，
+    --     则主干道人行道红灯倒计时 = SIDE_GREEN_TIME，
+    --     支干道人行道绿灯倒计时 = SIDE_GREEN_TIME - YELLOW_TIME。
+    ----------------------------------------------------------------------------
+    process(state)
+    begin
+        case state is
+            when MAIN_GREEN =>
+                -- 支干道人行道红灯 = 主干道车辆绿灯时间 = 60秒
+                ped_side_preset_high <= std_logic_vector(to_unsigned(MAIN_GREEN_TIME/10, 4));
+                ped_side_preset_low  <= std_logic_vector(to_unsigned(MAIN_GREEN_TIME mod 10, 4));
+                -- 主干道人行道绿灯 = 60-5=55秒
+                ped_main_preset_high <= std_logic_vector(to_unsigned((MAIN_GREEN_TIME - YELLOW_TIME)/10, 4));
+                ped_main_preset_low  <= std_logic_vector(to_unsigned((MAIN_GREEN_TIME - YELLOW_TIME) mod 10, 4));
+                ped_load <= '0';
+                
+            when SIDE_GREEN =>
+                -- 主干道人行道红灯 = 支干道车辆绿灯时间 = 45秒
+                ped_main_preset_high <= std_logic_vector(to_unsigned(SIDE_GREEN_TIME/10, 4));
+                ped_main_preset_low  <= std_logic_vector(to_unsigned(SIDE_GREEN_TIME mod 10, 4));
+                -- 支干道人行道绿灯 = 45-5=40秒
+                ped_side_preset_high <= std_logic_vector(to_unsigned((SIDE_GREEN_TIME - YELLOW_TIME)/10, 4));
+                ped_side_preset_low  <= std_logic_vector(to_unsigned((SIDE_GREEN_TIME - YELLOW_TIME) mod 10, 4));
+                ped_load <= '0';
+                
+            when others =>
+                ped_load <= '1';
+        end case;
+    end process;
+
+    ----------------------------------------------------------------------------
+    -- 人行道倒计时脉冲（简化实现，此处固定输出）
+    ----------------------------------------------------------------------------
+    ped_down <= '1';
+
+end Behavioral;分析这段代码

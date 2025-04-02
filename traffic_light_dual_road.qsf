@@ -18,7 +18,7 @@
 #
 # Quartus II 64-Bit
 # Version 13.1.0 Build 162 10/23/2013 SJ Full Version
-# Date created = 18:39:33  April 01, 2025
+# Date created = 12:45:18  March 31, 2025
 #
 # -------------------------------------------------------------------------- #
 #
@@ -40,17 +40,103 @@ set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name DEVICE EP4CE6E22C8
 set_global_assignment -name TOP_LEVEL_ENTITY traffic_light_dual_road
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13.1
-set_global_assignment -name PROJECT_CREATION_TIME_DATE "18:39:33  APRIL 01, 2025"
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "12:45:18  MARCH 31, 2025"
 set_global_assignment -name LAST_QUARTUS_VERSION 13.1
 set_global_assignment -name VHDL_FILE traffic_light_dual_road.vhd
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 1
-set_global_assignment -name NOMINAL_CORE_SUPPLY_VOLTAGE 1.2V
-set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (VHDL)"
-set_global_assignment -name EDA_OUTPUT_DATA_FORMAT VHDL -section_id eda_simulation
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
+set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (Verilog)"
+set_global_assignment -name EDA_OUTPUT_DATA_FORMAT "VERILOG HDL" -section_id eda_simulation
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "2.5 V"
+set_location_assignment PIN_31 -to clk
+set_location_assignment PIN_33 -to flash_trigger
+set_location_assignment PIN_106 -to down
+set_location_assignment PIN_2 -to load
+set_location_assignment PIN_135 -to high_q[3]
+set_location_assignment PIN_137 -to high_q[2]
+set_location_assignment PIN_143 -to high_q[1]
+set_location_assignment PIN_141 -to high_q[0]
+set_location_assignment PIN_121 -to low_q[3]
+set_location_assignment PIN_125 -to low_q[2]
+set_location_assignment PIN_127 -to low_q[1]
+set_location_assignment PIN_129 -to low_q[0]
+set_location_assignment PIN_138 -to main_preset_high[3]
+set_location_assignment PIN_136 -to main_preset_high[2]
+set_location_assignment PIN_142 -to main_preset_high[1]
+set_location_assignment PIN_144 -to main_preset_high[0]
+set_location_assignment PIN_126 -to main_preset_low[3]
+set_location_assignment PIN_124 -to main_preset_low[2]
+set_location_assignment PIN_128 -to main_preset_low[1]
+set_location_assignment PIN_132 -to main_preset_low[0]
+set_location_assignment PIN_32 -to rst
+set_location_assignment PIN_34 -to ped_side_preset_low[3]
+set_location_assignment PIN_39 -to ped_side_preset_low[2]
+set_location_assignment PIN_43 -to ped_side_preset_low[1]
+set_location_assignment PIN_46 -to ped_side_preset_low[0]
+set_location_assignment PIN_110 -to side_high_q[3]
+set_location_assignment PIN_112 -to side_high_q[2]
+set_location_assignment PIN_114 -to side_high_q[0]
+set_location_assignment PIN_119 -to side_high_q[1]
+set_location_assignment PIN_120 -to side_preset_high[1]
+set_location_assignment PIN_115 -to side_preset_high[0]
+set_location_assignment PIN_111 -to side_preset_high[2]
+set_location_assignment PIN_113 -to side_preset_high[3]
+set_location_assignment PIN_100 -to side_low_q[1]
+set_location_assignment PIN_87 -to side_low_q[0]
+set_location_assignment PIN_85 -to side_low_q[2]
+set_location_assignment PIN_86 -to side_low_q[3]
+set_location_assignment PIN_84 -to side_preset_low[1]
+set_location_assignment PIN_104 -to side_preset_low[0]
+set_location_assignment PIN_103 -to side_preset_low[2]
+set_location_assignment PIN_28 -to side_preset_low[3]
+set_location_assignment PIN_38 -to ped_side_low_q[3]
+set_location_assignment PIN_42 -to ped_side_low_q[2]
+set_location_assignment PIN_44 -to ped_side_low_q[1]
+set_location_assignment PIN_49 -to ped_side_low_q[0]
+set_location_assignment PIN_52 -to ped_side_preset_high[3]
+set_location_assignment PIN_50 -to ped_side_preset_high[2]
+set_location_assignment PIN_54 -to ped_side_preset_high[1]
+set_location_assignment PIN_58 -to ped_side_preset_high[0]
+set_location_assignment PIN_55 -to ped_side_high_q[0]
+set_location_assignment PIN_51 -to ped_side_high_q[2]
+set_location_assignment PIN_59 -to ped_side_high_q[1]
+set_location_assignment PIN_53 -to ped_side_high_q[3]
+set_location_assignment PIN_65 -to ped_low_q[3]
+set_location_assignment PIN_67 -to ped_low_q[2]
+set_location_assignment PIN_69 -to ped_low_q[0]
+set_location_assignment PIN_71 -to ped_low_q[1]
+set_location_assignment PIN_70 -to ped_main_preset_low[0]
+set_location_assignment PIN_68 -to ped_main_preset_low[1]
+set_location_assignment PIN_60 -to ped_main_preset_low[2]
+set_location_assignment PIN_66 -to ped_main_preset_low[3]
+set_location_assignment PIN_72 -to ped_down
+set_location_assignment PIN_3 -to ped_load
+set_location_assignment PIN_10 -to ped_main_preset_high[0]
+set_location_assignment PIN_11 -to ped_main_preset_high[1]
+set_location_assignment PIN_74 -to ped_main_preset_high[2]
+set_location_assignment PIN_73 -to ped_main_preset_high[3]
+set_location_assignment PIN_77 -to ped_high_q[0]
+set_location_assignment PIN_83 -to ped_high_q[1]
+set_location_assignment PIN_75 -to ped_high_q[3]
+set_location_assignment PIN_76 -to ped_high_q[2]
+set_global_assignment -name ENABLE_CONFIGURATION_PINS OFF
+set_global_assignment -name ENABLE_NCE_PIN OFF
+set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
+set_global_assignment -name USE_CONFIGURATION_DEVICE OFF
+set_global_assignment -name CRC_ERROR_OPEN_DRAIN OFF
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-STATED"
+set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -rise
+set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
+set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
+set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
+set_global_assignment -name VECTOR_WAVEFORM_FILE output_files/Waveform.vwf
+set_global_assignment -name EDA_NETLIST_WRITER_OUTPUT_DIR "D:/quartus/project/traffic_light_dual_road/simulation/qsim/" -section_id eda_simulation
+set_global_assignment -name EDA_GENERATE_FUNCTIONAL_NETLIST ON -section_id eda_simulation
+set_global_assignment -name VHDL_FILE traffic_light_dual_road_bb.vhd
+set_global_assignment -name VHDL_FILE counter_74LS192.vhd
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
